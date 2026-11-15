@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaf Disease Identifier</title>
+    <style>
+        body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    background-image: url('images/bg.jfif');
+    background-size: cover; 
+    background-position: top; 
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+        h1 {
+            color: #333;
+        }
+
+        #uploadForm {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        #result, #accuracy {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .success {
+            color: green;
+        }
+
+        #uploadedImage {
+            margin-top: 20px;
+            max-width: 300px; /* Limit image width */
+            max-height: 300px; /* Limit image height */
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        #treatmentButton {
+            display: none; /* Initially hidden */
+        }
+    </style>
+</head>
+<body>
+    <h1>Upload an Image of a Leaf</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="imageFile" accept="image/*" onchange="previewImage()" />
+        <button type="button" onclick="uploadImage()">Upload</button>
+    </form>
+
+    <img id="uploadedImage" src="" alt="Uploaded Image" style="display:none;">
+    
+    <div id="result"></div>
+    <div id="accuracy"></div> <!-- New div for accuracy -->
+    <button id="treatmentButton" onclick="searchTreatment()">Search Treatment</button>
+
+    <script>
+        function previewImage() {
+            const file = document.getElementById('imageFile').files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                const imgElement = document.getElementById('uploadedImage');
+                imgElement.src = e.target.result;
+                imgElement.style.display = 'block'; // Show the image
+            };
+
+            if (file) {
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function uploadImage() {
+            var formData = new FormData();
+            var imageFile = document.getElementById('imageFile').files[0];
+            formData.append('file', imageFile);
+
+            fetch('http://127.0.0.1:5000/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                document.getElementById('result').innerHTML = 'Prediction: <span class="success">' + data.prediction + '</span>';
+                document.getElementById('accuracy').innerHTML = 'Accuracy: <span class="success">' + data.accuracy + '%</span>'; // Display accuracy
+                toggleTreatmentButton(data.prediction); // Show or hide treatment button
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('result').innerHTML = 'Error: <span class="error">' + error.message + '</span>'; // Display the error message
+            });
+        }
+
+        function toggleTreatmentButton(prediction) {
+            const treatmentButton = document.getElementById('treatmentButton');
+            // Check if prediction contains "healthy"
+            if (prediction.toLowerCase().includes('healthy')) {
+                treatmentButton.style.display = 'none'; // Hide button
+            } else {
+                treatmentButton.style.display = 'block'; // Show button
+            }
+        }
+
+        function searchTreatment() {
+            const prediction = document.getElementById('result').innerText.split(': ')[1];
+            const searchQuery = encodeURIComponent(prediction + ' treatment');
+            const url = 'https://www.google.com/search?q=' + searchQuery;
+            window.open(url, '_blank'); // Open in a new tab
+        }
+    </script>
+</body>
+</html>
